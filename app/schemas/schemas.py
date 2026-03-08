@@ -173,3 +173,32 @@ class RecommendationResponse(BaseModel): #recommend products
     recommended_ingredients: List[IngredientResponse] = []
     matching_products: List[ProductSummaryResponse] = []
     total_found: int
+
+class ConcernDistributionItem(BaseModel):
+    concern: str
+    skin_type: str
+    count: int
+    percentage: str
+
+class ConcernDistributionResponse(BaseModel):
+    total_profiles: int
+    most_common: str
+    distribution: List[ConcernDistributionItem] = []
+
+class IngredientFrequencyItem(BaseModel):
+    name: str
+    appears_in: int
+    percentage: str
+
+class IngredientFrequencyResponse(BaseModel):
+    total_products: int
+    top_ingredients: List[IngredientFrequencyItem] = []
+
+class ProfileMatchResponse(BaseModel):
+    product_id: int
+    product_name: str
+    skin_type: str
+    match_score: float
+    matching_ingredients: List[str] = []
+    total_recommended: int
+    matched: int
