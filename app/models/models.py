@@ -29,11 +29,16 @@ class SkinConcern(Base):
     __tablename__ = 'skin_concerns'
 
     id = Column(Integer, primary_key=True, index=True)
-    name = Column(String(100), unique=True, nullable=False)
+    name = Column(String(100),  nullable=False)
     # Acne, Dark Circles, Dark Spots, Dullness etc
+    skin_type = Column(String(50), nullable=False)
 
     recommended_ingredients = relationship('Ingredient', secondary=concern_ingredient, back_populates='recommended_for')
     profiles = relationship('SkinProfile', secondary=profile_concern, back_populates='concerns')
+
+    __table_args__ = (
+        UniqueConstraint('name', 'skin_type', name='unique_concern_per_skintype'),
+    ) #same concern can't be duplicated for the same skin type, but CAN exist across different skin types:
 
 # ─────────────────────────────────────────
 # INGREDIENT
@@ -128,7 +133,7 @@ class SkinProfile(Base):
 
     id = Column(Integer, primary_key=True, index=True)
     user_id = Column(Integer, ForeignKey('users.id'), nullable=False, unique=True)
-    skin_type = Column(String(50), nullable=True)
+    skin_type = Column(String(50), nullable=False)
     # oily / dry / combination / sensitive / normal
 
     user = relationship('User', back_populates='profile')
