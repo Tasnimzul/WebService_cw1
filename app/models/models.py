@@ -1,20 +1,44 @@
-from sqlalchemy import (Column, Integer, String, Float,Text, ForeignKey, Table, Boolean, CheckConstraint, UniqueConstraint)
+from sqlalchemy import (Column, Integer, String, Float, ForeignKey, Table, Boolean, CheckConstraint, UniqueConstraint)
 from sqlalchemy.orm import relationship
 from app.database import Base
 
 # ─────────────────────────────────────────
-# BRIDGE TABLE
+# BRIDGE TABLES
 # ─────────────────────────────────────────
 
+# SkinConcern ↔ Ingredient (recommended ingredients per concern)
 concern_ingredient = Table(
     'concern_ingredients', Base.metadata,
     Column('concern_id', ForeignKey('skin_concerns.id'), primary_key=True),
     Column('ingredient_id', ForeignKey('ingredients.id'), primary_key=True)
 )
 
+# SkinProfile ↔ SkinConcern (user has many concerns)
+profile_concern = Table(
+    'profile_concerns', Base.metadata,
+    Column('profile_id', ForeignKey('skin_profiles.id'), primary_key=True),
+    Column('concern_id', ForeignKey('skin_concerns.id'), primary_key=True)
+)
 
 # ─────────────────────────────────────────
-# MAIN MODELS
+# SKIN CONCERN
+# from skin concern dataset
+# ─────────────────────────────────────────
+
+class SkinConcern(Base):
+    __tablename__ = 'skin_concerns'
+
+    id = Column(Integer, primary_key=True, index=True)
+    name = Column(String(100), unique=True, nullable=False)
+    # Acne, Dark Circles, Dark Spots, Dullness etc
+
+    recommended_ingredients = relationship('Ingredient', secondary=concern_ingredient, back_populates='recommended_for')
+    profiles = relationship('SkinProfile', secondary=profile_concern, back_populates='concerns')
+
+# ─────────────────────────────────────────
+# INGREDIENT
+# from both datasets
+# ─────────────────────────────────────────
 
 class Ingredient(Base):
     __tablename__ = 'ingredients'
@@ -28,30 +52,24 @@ class Ingredient(Base):
     conflicts_as_first = relationship('IngredientConflict', foreign_keys='IngredientConflict.ingredient_1_id', back_populates='ingredient_1')
     conflicts_as_second = relationship('IngredientConflict', foreign_keys='IngredientConflict.ingredient_2_id', back_populates='ingredient_2')
 
-
-
-class SkinConcern(Base):
-    __tablename__ = 'skin_concerns'
-
-    id = Column(Integer, primary_key=True, index=True)
-    name = Column(String(100), unique=True, nullable=False)
-
-    recommended_ingredients = relationship('Ingredient', secondary=concern_ingredient, back_populates='recommended_for')
-
+# ─────────────────────────────────────────
+# PRODUCT
+# from lookfantastic dataset
+# ─────────────────────────────────────────
 
 class Product(Base):
     __tablename__ = 'products'
 
     id = Column(Integer, primary_key=True, index=True)
     name = Column(String(200), nullable=False)
+    product_type = Column(String(100), nullable=True)
     price = Column(Float, nullable=True)
-    rating = Column(Float, nullable=True)
-    size = Column(String(50), nullable=True)
-    loves_count = Column(Integer, nullable=True)
 
     product_ingredients = relationship('ProductIngredient', back_populates='product', cascade='all, delete-orphan')
 
-
+# ─────────────────────────────────────────
+# PRODUCT INGREDIENT
+# ─────────────────────────────────────────
 
 class ProductIngredient(Base):
     __tablename__ = 'product_ingredients'
@@ -64,7 +82,10 @@ class ProductIngredient(Base):
     product = relationship('Product', back_populates='product_ingredients')
     ingredient = relationship('Ingredient', back_populates='used_in_products')
 
-
+# ─────────────────────────────────────────
+# INGREDIENT CONFLICT
+# manually curated
+# ─────────────────────────────────────────
 
 class IngredientConflict(Base):
     __tablename__ = 'ingredient_conflicts'
@@ -78,17 +99,13 @@ class IngredientConflict(Base):
     ingredient_2 = relationship('Ingredient', foreign_keys=[ingredient_2_id], back_populates='conflicts_as_second')
 
     __table_args__ = (
-        CheckConstraint(
-            'ingredient_1_id != ingredient_2_id',
-            name='check_different_ingredients'
-        ),
-        UniqueConstraint(
-            'ingredient_1_id',
-            'ingredient_2_id',
-            name='unique_conflict_pair'
-        ),
+        CheckConstraint('ingredient_1_id != ingredient_2_id', name='check_different_ingredients'),
+        UniqueConstraint('ingredient_1_id', 'ingredient_2_id', name='unique_conflict_pair'),
     )
 
+# ─────────────────────────────────────────
+# USER
+# ─────────────────────────────────────────
 
 class User(Base):
     __tablename__ = 'users'
@@ -99,24 +116,20 @@ class User(Base):
     hashed_password = Column(String(200), nullable=False)
     is_active = Column(Boolean, default=True)
 
-    profile = relationship('UserProfile', back_populates='user', uselist=False)
+    profile = relationship('SkinProfile', back_populates='user', uselist=False)
 
+# ─────────────────────────────────────────
+# SKIN PROFILE
+# user generated — one per user
+# ─────────────────────────────────────────
 
-
-user_concerns = Table(
-    'user_concerns', Base.metadata,
-    Column('user_id', ForeignKey('users.id'), primary_key=True),
-    Column('concern_id', ForeignKey('skin_concerns.id'), primary_key=True)
-)
-
-# 2. Update UserProfile
-class UserProfile(Base):
-    __tablename__ = 'user_profiles'
+class SkinProfile(Base):
+    __tablename__ = 'skin_profiles'
 
     id = Column(Integer, primary_key=True, index=True)
-    user_id = Column(Integer, ForeignKey('users.id'), nullable=False)
-    age_range = Column(String(10), nullable=True)
-    budget = Column(Float, nullable=True)
+    user_id = Column(Integer, ForeignKey('users.id'), nullable=False, unique=True)
+    skin_type = Column(String(50), nullable=True)
+    # oily / dry / combination / sensitive / normal
 
     user = relationship('User', back_populates='profile')
-    concerns = relationship('SkinConcern', secondary=user_concerns)
+    concerns = relationship('SkinConcern', secondary=profile_concern, back_populates='profiles')

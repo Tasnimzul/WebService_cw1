@@ -93,3 +93,32 @@ This week (before 13 March deadline):
 │ hashed_password     │         │ budget              │
 │ is_active           │         └─────────────────────┘
 └─────────────────────┘
+
+STEP 1: Request arrives
+Someone visits: GET /products/1/
+
+STEP 2: Router receives it
+Your products.py router function runs
+
+STEP 3: Talks to database via SQLAlchemy
+db.query(Product).filter(Product.id == 1).first()
+SQLAlchemy translates this to SQL:
+SELECT * FROM products WHERE id = 1
+
+STEP 4: Database returns a row
+id=1, name="CeraVe", price=12.99, rating=4.7
+
+STEP 5: SQLAlchemy converts row to Python object
+product.id    = 1
+product.name  = "CeraVe"
+product.price = 12.99
+
+STEP 6: Schema converts object to JSON
+{
+    "id": 1,
+    "name": "CeraVe",
+    "price": 12.99,
+    "rating": 4.7
+}
+
+STEP 7: JSON sent back to whoever asked
