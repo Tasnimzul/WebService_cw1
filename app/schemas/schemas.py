@@ -25,7 +25,8 @@ class IngredientResponse(IngredientBase):
 # ─────────────────────────────────────────
 
 class SkinConcernBase(BaseModel):
-    name: str
+    name: str #the name of skin concern itself
+    skin_type: str
 
 class SkinConcernCreate(SkinConcernBase):
     pass
@@ -34,7 +35,7 @@ class SkinConcernResponse(SkinConcernBase):
     id: int
     recommended_ingredients: List[IngredientResponse] = []
 
-    class Config:
+    class Config: #take from db
         from_attributes = True
 
 
@@ -56,6 +57,7 @@ class ProductUpdate(BaseModel):
     price: Optional[float] = None
 
 class ProductIngredientResponse(BaseModel):
+#This is never used directly by an endpoint. It's nested inside ProductResponse. Represents one row from product_ingredients bridge table:
     position: int
     ingredient: IngredientResponse
 
@@ -69,7 +71,7 @@ class ProductResponse(ProductBase):
     class Config:
         from_attributes = True
 
-class ProductSummaryResponse(ProductBase):
+class ProductSummaryResponse(ProductBase): #basically response with no ingredients
     id: int
 
     class Config:
@@ -85,7 +87,7 @@ class IngredientConflictBase(BaseModel):
     ingredient_2_id: int
     severity: str
 
-class IngredientConflictCreate(IngredientConflictBase):
+class IngredientConflictCreate(IngredientConflictBase): #only used by admin
     pass
 
 class IngredientConflictResponse(IngredientConflictBase):
@@ -119,7 +121,7 @@ class UserResponse(BaseModel):
     class Config:
         from_attributes = True
 
-class TokenResponse(BaseModel):
+class TokenResponse(BaseModel): #used when returning token after succesful login. User stores this token and send it with every protected request
     access_token: str
     token_type: str = "bearer"
 
@@ -129,16 +131,16 @@ class TokenResponse(BaseModel):
 # ─────────────────────────────────────────
 
 class SkinProfileCreate(BaseModel):
-    skin_type: Optional[str] = None
-    concern_ids: List[int] = []
+    skin_type: str                          # required
+    concern_ids: Optional[List[int]] = None # optional
 
 class SkinProfileUpdate(BaseModel):
     skin_type: Optional[str] = None
     concern_ids: Optional[List[int]] = None
 
-class SkinProfileResponse(BaseModel):
+class SkinProfileResponse(BaseModel): #returns full profile with their recommended ingredients
     id: int
-    skin_type: Optional[str] = None
+    skin_type: str
     concerns: List[SkinConcernResponse] = []
 
     class Config:
@@ -165,7 +167,7 @@ class ConflictCheckResponse(BaseModel):
     conflict_count: int
     conflicts: List[IngredientConflictResponse] = []
 
-class RecommendationResponse(BaseModel):
+class RecommendationResponse(BaseModel): #recommend products
     skin_type: str
     concerns: List[str] = []
     recommended_ingredients: List[IngredientResponse] = []
