@@ -12,6 +12,9 @@ class IngredientBase(BaseModel):
 class IngredientCreate(IngredientBase):
     pass
 
+class IngredientUpdate(BaseModel):
+    irritation_level: str  # low / medium / high
+
 class IngredientResponse(IngredientBase):
     id: int
     irritation_level: str
@@ -160,12 +163,6 @@ class SafetyScoreResponse(BaseModel):
     medium_irritation_count: int
     low_irritation_count: int
 
-class ConflictCheckResponse(BaseModel):
-    product_id: int
-    product_name: str
-    has_conflicts: bool
-    conflict_count: int
-    conflicts: List[IngredientConflictResponse] = []
 
 class RecommendationResponse(BaseModel): #recommend products
     skin_type: str
@@ -202,3 +199,18 @@ class ProfileMatchResponse(BaseModel):
     matching_ingredients: List[str] = []
     total_recommended: int
     matched: int
+
+class ProductConflictCheckRequest(BaseModel):
+    product_ids: List[int]
+
+class ProductConflictItem(BaseModel):
+    product_1: str
+    product_2: str
+    conflicting_ingredients: str
+    severity: str
+
+class ProductConflictCheckResponse(BaseModel):
+    products_checked: List[ProductSummaryResponse] = []
+    has_conflicts: bool
+    conflict_count: int
+    conflicts: List[ProductConflictItem] = []
