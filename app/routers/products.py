@@ -13,8 +13,12 @@ from app.schemas.schemas import (
 )
 from rapidfuzz import fuzz
 from app.schemas.schemas import SkinTypeEnum, ProductTypeEnum
+from slowapi import Limiter
+from slowapi.util import get_remote_address
+from fastapi import Request
 
 router = APIRouter(prefix="/products", tags=["Products"])
+limiter = Limiter(key_func=get_remote_address)
 
 def is_ingredient_match(product_ing: str, recommended_set: set) -> bool:
     p = product_ing.lower().strip()
@@ -32,7 +36,9 @@ def is_ingredient_match(product_ing: str, recommended_set: set) -> bool:
 # ─────────────────────────────────────────
 
 @router.get("/", response_model=List[ProductSummaryResponse])
+@limiter.limit("60/minute") #max 60 per minute — prevents scraping
 def get_products(
+    request: Request,
     product_type: Optional[ProductTypeEnum] = Query(None),
     min_price: Optional[float] = Query(None),
     max_price: Optional[float] = Query(None),
