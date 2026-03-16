@@ -1,5 +1,28 @@
-from pydantic import BaseModel, EmailStr
+from pydantic import BaseModel, EmailStr, Field
 from typing import Optional, List
+from enum import Enum
+
+class SkinTypeEnum(str, Enum):
+    normal = "Normal"
+    dry = "Dry"
+    oily = "Oily"
+    combination = "Combination"
+
+class ProductTypeEnum(str, Enum):
+    moisturiser = "Moisturiser"
+    serum = "Serum"
+    oil = "Oil"
+    mist = "Mist"
+    balm = "Balm"
+    mask = "Mask"
+    peel = "Peel"
+    eye_care = "Eye Care"
+    cleanser = "Cleanser"
+    toner = "Toner"
+    exfoliator = "Exfoliator"
+    bath_salts = "Bath Salts"
+    body_wash = "Body Wash"
+    bath_oil = "Bath Oil"
 
 
 # ─────────────────────────────────────────
@@ -28,8 +51,8 @@ class IngredientResponse(IngredientBase):
 # ─────────────────────────────────────────
 
 class SkinConcernBase(BaseModel):
-    name: str #the name of skin concern itself
-    skin_type: str
+    name: str
+    skin_type: SkinTypeEnum
 
 class SkinConcernCreate(SkinConcernBase):
     pass
@@ -48,16 +71,22 @@ class SkinConcernResponse(SkinConcernBase):
 
 class ProductBase(BaseModel):
     name: str
-    product_type: Optional[str] = None
+    product_type: Optional[ProductTypeEnum] = None
     price: Optional[float] = None
 
 class ProductCreate(ProductBase):
-    pass
+    ingredient_ids: Optional[List[int]] = None # add ingredients from list when creating products
 
 class ProductUpdate(BaseModel):
-    name: Optional[str] = None
-    product_type: Optional[str] = None
-    price: Optional[float] = None
+    name: Optional[str] = Field(None, description="Leave out to keep unchanged")
+    product_type: Optional[ProductTypeEnum] = Field(None, description="Leave out to keep unchanged")
+    price: Optional[float] = Field(None, description="Leave out to keep unchanged")
+
+    model_config = {
+        "json_schema_extra": {
+            "examples": [{"name": None, "product_type": None, "price": None}]
+        }
+    }
 
 class ProductIngredientResponse(BaseModel):
 #This is never used directly by an endpoint. It's nested inside ProductResponse. Represents one row from product_ingredients bridge table:
@@ -115,6 +144,19 @@ class UserLogin(BaseModel):
     username: str
     password: str
 
+class UserUpdate(BaseModel):
+    username: Optional[str] = Field(None, description="Leave out to keep unchanged")
+    email: Optional[EmailStr] = Field(None, description="Leave out to keep unchanged")
+    current_password: Optional[str] = Field(None, description="Leave out to keep unchanged")
+    new_password: Optional[str] = Field(None, description="Leave out to keep unchanged")
+
+    model_config = {
+        "json_schema_extra": {
+            "examples": [{"username": None, "email": None, "current_password": None, "new_password": None}]
+        }
+    }
+
+
 class UserResponse(BaseModel):
     id: int
     username: str
@@ -134,16 +176,22 @@ class TokenResponse(BaseModel): #used when returning token after succesful login
 # ─────────────────────────────────────────
 
 class SkinProfileCreate(BaseModel):
-    skin_type: str                          # required
-    concern_ids: Optional[List[int]] = None # optional
-
-class SkinProfileUpdate(BaseModel):
-    skin_type: Optional[str] = None
+    skin_type: SkinTypeEnum
     concern_ids: Optional[List[int]] = None
 
-class SkinProfileResponse(BaseModel): #returns full profile with their recommended ingredients
+class SkinProfileUpdate(BaseModel):
+    skin_type: Optional[SkinTypeEnum] = Field(None, description="Leave out to keep unchanged")
+    concern_ids: Optional[List[int]] = Field(None, description="Leave out to keep unchanged")
+
+    model_config = {
+        "json_schema_extra": {
+            "examples": [{"skin_type": None, "concern_ids": None}]
+        }
+    }
+
+class SkinProfileResponse(BaseModel):
     id: int
-    skin_type: str
+    skin_type: SkinTypeEnum
     concerns: List[SkinConcernResponse] = []
 
     class Config:

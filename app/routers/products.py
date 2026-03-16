@@ -11,8 +11,20 @@ from app.schemas.schemas import (
     SafetyScoreResponse, ProfileMatchResponse,
     ProductConflictCheckRequest, ProductConflictCheckResponse, ProductConflictItem
 )
+from rapidfuzz import fuzz
+from app.schemas.schemas import SkinTypeEnum, ProductTypeEnum
 
 router = APIRouter(prefix="/products", tags=["Products"])
+
+def is_ingredient_match(product_ing: str, recommended_set: set) -> bool:
+    p = product_ing.lower().strip()
+    for r in recommended_set:
+        if r in p or p in r:
+            return True
+        if len(p) <= len(r) * 2 and len(r) <= len(p) * 2:
+            if fuzz.ratio(p, r) >= 80:
+                return True
+    return False
 
 
 # ─────────────────────────────────────────
@@ -21,7 +33,7 @@ router = APIRouter(prefix="/products", tags=["Products"])
 
 @router.get("/", response_model=List[ProductSummaryResponse])
 def get_products(
-    product_type: Optional[str] = Query(None),
+    product_type: Optional[ProductTypeEnum] = Query(None),
     min_price: Optional[float] = Query(None),
     max_price: Optional[float] = Query(None),
     db: Session = Depends(get_db)
@@ -52,6 +64,31 @@ def create_product(product: ProductCreate, db: Session = Depends(get_db)):
         price=product.price
     )
     db.add(db_product)
+    db.flush()
+
+    if product.ingredient_ids:
+        # validate all ingredient IDs exist
+        ingredients = db.query(Ingredient).filter(
+            Ingredient.id.in_(product.ingredient_ids)
+        ).all()
+
+        found_ids = {i.id for i in ingredients}
+        missing = [i for i in product.ingredient_ids if i not in found_ids]
+        if missing:
+            raise HTTPException(
+                status_code=404,
+                detail=f"Ingredient IDs not found: {missing}"
+            )
+
+        # position = order they were provided (1 = highest concentration)
+        for position, ingredient_id in enumerate(product.ingredient_ids, start=1):
+            link = ProductIngredient(
+                product_id=db_product.id,
+                ingredient_id=ingredient_id,
+                position=position
+            )
+            db.add(link)
+
     db.commit()
     db.refresh(db_product)
     return db_product
@@ -177,7 +214,7 @@ def check_product_conflicts(
 @router.get("/{product_id}/profile-match", response_model=ProfileMatchResponse)
 def profile_match(
     product_id: int,
-    skin_type: str = Query(...),
+    skin_type: SkinTypeEnum = Query(...),
     db: Session = Depends(get_db)
 ):
     product = db.query(Product).filter(Product.id == product_id).first()
@@ -199,7 +236,7 @@ def profile_match(
 
     matches = [
         name for name in product_ingredient_names
-        if name.lower() in recommended_names
+        if is_ingredient_match(name, recommended_names)
     ]
 
     total_recommended = len(recommended_names)

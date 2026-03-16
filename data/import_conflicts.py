@@ -34,8 +34,8 @@ def run():
         skipped = 0
 
         for _, row in df.iterrows():
-            name_1 = str(row["ingredient_1"]).strip()
-            name_2 = str(row["ingredient_2"]).strip()
+            name_1 = str(row["ingredient_1"]).strip().lower()
+            name_2 = str(row["ingredient_2"]).strip().lower()
             severity = str(row["severity"]).strip().lower()
 
             # ── Look up ingredients (case-insensitive) ────────────────────

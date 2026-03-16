@@ -1,13 +1,13 @@
 ingredient_1,ingredient_2,severity
-Retinol,Glycolic Acid,high
-Retinol,Lactic Acid,high
-Retinol,Salicylic Acid,high
-Retinol,Vitamin C,medium
-Retinol,Ascorbic Acid,medium
-Benzoyl Peroxide,Retinol,high
-Niacinamide,Vitamin C,low
-Niacinamide,Ascorbic Acid,low
-Glycolic Acid,Salicylic Acid,medium
-Glycolic Acid,Vitamin C,medium
-Lactic Acid,Salicylic Acid,medium
-Vitamin C,Salicylic Acid,medium
+retinol,glycolic acid,high
+retinol,lactic acid,high
+retinol,salicylic acid,high
+retinol,vitamin c,medium
+retinol,ascorbic acid,medium
+benzoyl peroxide,retinol,high
+niacinamide,vitamin c,low
+niacinamide,ascorbic acid,low
+glycolic acid,salicylic acid,medium
+glycolic acid,vitamin c,medium
+lactic acid,salicylic acid,medium
+vitamin c,salicylic acid,medium

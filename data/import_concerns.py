@@ -122,11 +122,12 @@ def run():
             ingredient_names = parse_ingredients(raw_ingredients)
 
             for ing_name in ingredient_names:
-                ing_name_clean = ing_name.strip()
+                # Normalise to lowercase so names match across both datasets
+                ing_name_clean = ing_name.strip().lower()
                 if not ing_name_clean:
                     continue
 
-                cache_key = ing_name_clean.lower()
+                cache_key = ing_name_clean
 
                 if cache_key not in ingredient_cache:
                     # Check DB first

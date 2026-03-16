@@ -1,7 +1,7 @@
 from fastapi import FastAPI
 from app.database import engine, Base
 from app.models import models
-from app.routers import products, auth, profile, analytics, conflicts
+from app.routers import products, auth, profile, analytics, conflicts, users
 
 Base.metadata.create_all(bind=engine)
 
@@ -16,6 +16,7 @@ app.include_router(products.router)
 app.include_router(profile.router)
 app.include_router(analytics.router)
 app.include_router(conflicts.router)
+app.include_router(users.router)
 
 @app.get("/")
 def root():

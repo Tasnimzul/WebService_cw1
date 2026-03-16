@@ -9,8 +9,26 @@ from app.schemas.schemas import (
 )
 from app.core.auth import get_current_user
 from app.models.models import User
+from rapidfuzz import fuzz
 
 router = APIRouter(prefix="/profile", tags=["Skin Profile"])
+
+
+def is_ingredient_match(product_ing: str, recommended_set: set) -> bool: #uses combination of fuzzy and if contains matching
+    """
+    Match product ingredient against recommended ingredients using:
+    1. Contains check — handles long compound names e.g. 'tea tree gluconic acid' vs 'gluconic acid'
+    2. Fuzzy match — handles typos e.g. 'salysilic acid' vs 'salicylic acid'
+       Only applied to similar-length strings to avoid false positives.
+    """
+    p = product_ing.lower().strip()
+    for r in recommended_set:
+        if r in p or p in r:
+            return True
+        if len(p) <= len(r) * 2 and len(r) <= len(p) * 2:
+            if fuzz.ratio(p, r) >= 80:
+                return True
+    return False
 
 
 @router.post("/", response_model=SkinProfileResponse, status_code=201)
@@ -99,28 +117,28 @@ def get_recommendations(
     if not profile.concerns:
         raise HTTPException(status_code=400, detail="No concerns in profile. Update your profile with concerns first.")
 
-    # get recommended ingredients from all user concerns
+    # get recommended ingredient names from all user concerns
+    recommended_names = set()
     recommended_ingredients = []
     seen_ids = set()
     for concern in profile.concerns:
         for ingredient in concern.recommended_ingredients:
+            recommended_names.add(ingredient.name.lower().strip())
             if ingredient.id not in seen_ids:
                 recommended_ingredients.append(ingredient)
                 seen_ids.add(ingredient.id)
 
-    # find products containing any of those ingredients
-    recommended_ingredient_ids = [i.id for i in recommended_ingredients]
-
-    product_ids = db.query(ProductIngredient.product_id).filter(
-        ProductIngredient.ingredient_id.in_(recommended_ingredient_ids)
-    ).distinct().all()
-
-    product_ids = [p[0] for p in product_ids]
-
+    # get all products and filter by fuzzy ingredient match
     from app.models.models import Product
-    matching_products = db.query(Product).filter(
-        Product.id.in_(product_ids)
-    ).all()
+    all_products = db.query(Product).all()
+
+    matching_products = []
+    for product in all_products:
+        product_ingredient_names = [
+            pi.ingredient.name for pi in product.product_ingredients
+        ]
+        if any(is_ingredient_match(name, recommended_names) for name in product_ingredient_names):
+            matching_products.append(product)
 
     return RecommendationResponse(
         skin_type=profile.skin_type,
