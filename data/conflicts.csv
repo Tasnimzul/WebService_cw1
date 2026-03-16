@@ -1,0 +1,13 @@
+ingredient_1,ingredient_2,severity
+retinol,glycolic acid,high
+retinol,lactic acid,high
+retinol,salicylic acid,high
+retinol,vitamin c,medium
+retinol,ascorbic acid,medium
+benzoyl peroxide,retinol,high
+niacinamide,vitamin c,low
+niacinamide,ascorbic acid,low
+glycolic acid,salicylic acid,medium
+glycolic acid,vitamin c,medium
+lactic acid,salicylic acid,medium
+vitamin c,salicylic acid,medium
