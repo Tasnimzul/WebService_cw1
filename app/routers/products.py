@@ -40,7 +40,7 @@ def get_products(
 ):
     query = db.query(Product)
     if product_type:
-        query = query.filter(Product.product_type.ilike(f"%{product_type}%"))
+        query = query.filter(Product.product_type == product_type.value)
     if min_price is not None:
         query = query.filter(Product.price >= min_price)
     if max_price is not None:
