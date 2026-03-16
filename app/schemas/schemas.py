@@ -57,11 +57,12 @@ class SkinConcernBase(BaseModel):
 class SkinConcernCreate(SkinConcernBase):
     pass
 
-class SkinConcernResponse(SkinConcernBase):
+class SkinConcernResponse(BaseModel):
     id: int
+    name: str
     recommended_ingredients: List[IngredientResponse] = []
 
-    class Config: #take from db
+    class Config:
         from_attributes = True
 
 
@@ -221,7 +222,6 @@ class RecommendationResponse(BaseModel): #recommend products
 
 class ConcernDistributionItem(BaseModel):
     concern: str
-    skin_type: str
     count: int
     percentage: str
 

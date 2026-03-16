@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 from typing import List
 from app.database import get_db
@@ -10,6 +10,7 @@ from app.schemas.schemas import (
 from app.core.auth import get_current_user
 from app.models.models import User
 from rapidfuzz import fuzz
+from app.schemas.schemas import SkinTypeEnum, SkinConcernResponse
 
 router = APIRouter(prefix="/profile", tags=["Skin Profile"])
 
@@ -48,8 +49,12 @@ def create_profile(
 
     # link concerns if provided
     if profile.concern_ids:
+        # fetch concerns that match both the provided IDs and the user's skin type
         concerns = db.query(SkinConcern).filter(
-            SkinConcern.id.in_(profile.concern_ids)
+            SkinConcern.name.in_(
+                db.query(SkinConcern.name).filter(SkinConcern.id.in_(profile.concern_ids))
+            ),
+            SkinConcern.skin_type == profile.skin_type.value
         ).all()
         db_profile.concerns = concerns
 
@@ -83,8 +88,13 @@ def update_profile(
         profile.skin_type = profile_update.skin_type
 
     if profile_update.concern_ids is not None:
+        current_skin_type = profile_update.skin_type.value if profile_update.skin_type else profile.skin_type
+        # automatically fetch the correct skin_type version of each concern
         concerns = db.query(SkinConcern).filter(
-            SkinConcern.id.in_(profile_update.concern_ids)
+            SkinConcern.name.in_(
+                db.query(SkinConcern.name).filter(SkinConcern.id.in_(profile_update.concern_ids))
+            ),
+            SkinConcern.skin_type == current_skin_type
         ).all()
         profile.concerns = concerns
 
@@ -103,6 +113,18 @@ def delete_profile(
         raise HTTPException(status_code=404, detail="No profile found.")
     db.delete(profile)
     db.commit()
+
+@router.get("/common-concerns", response_model=List[SkinConcernResponse])
+def get_common_concerns_for_skin_type(
+    skin_type: SkinTypeEnum = Query(...),
+    db: Session = Depends(get_db)
+):
+    concerns = db.query(SkinConcern).filter(
+        SkinConcern.skin_type == skin_type.value
+    ).all()
+    if not concerns:
+        raise HTTPException(status_code=404, detail="No concerns found for this skin type")
+    return concerns
 
 
 @router.get("/recommendations", response_model=RecommendationResponse)

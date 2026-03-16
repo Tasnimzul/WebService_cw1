@@ -37,7 +37,6 @@ def concern_distribution(db: Session = Depends(get_db)):
     distribution = [
         ConcernDistributionItem(
             concern=row.name,
-            skin_type=row.skin_type,
             count=row.count,
             percentage=f"{round(row.count / total_profiles * 100, 1)}%"
         )
