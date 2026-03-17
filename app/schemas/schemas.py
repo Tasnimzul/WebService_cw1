@@ -99,6 +99,7 @@ class ProductIngredientResponse(BaseModel):
 
 class ProductResponse(ProductBase):
     id: int
+    owner_id: Optional[int] = None
     product_ingredients: List[ProductIngredientResponse] = []
 
     class Config:
@@ -106,6 +107,7 @@ class ProductResponse(ProductBase):
 
 class ProductSummaryResponse(ProductBase): #basically response with no ingredients
     id: int
+    owner_id: Optional[int] = None
 
     class Config:
         from_attributes = True
@@ -163,6 +165,7 @@ class UserResponse(BaseModel):
     username: str
     email: str
     is_active: bool
+    is_admin: bool
 
     class Config:
         from_attributes = True

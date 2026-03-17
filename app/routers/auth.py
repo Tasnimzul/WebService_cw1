@@ -45,5 +45,5 @@ def login(request: Request,form_data: OAuth2PasswordRequestForm = Depends(), db:
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Incorrect username or password"
         )
-    token = create_access_token(data={"sub": db_user.username})
+    token = create_access_token(data={"sub": str(db_user.id)})
     return TokenResponse(access_token=token)

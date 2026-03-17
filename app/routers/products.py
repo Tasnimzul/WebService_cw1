@@ -16,6 +16,8 @@ from app.schemas.schemas import SkinTypeEnum, ProductTypeEnum
 from slowapi import Limiter
 from slowapi.util import get_remote_address
 from fastapi import Request
+from app.core.auth import get_current_user
+from app.models.models import User
 
 router = APIRouter(prefix="/products", tags=["Products"])
 limiter = Limiter(key_func=get_remote_address)
@@ -63,11 +65,12 @@ def get_product(product_id: int, db: Session = Depends(get_db)):
 
 
 @router.post("/", response_model=ProductResponse, status_code=201)
-def create_product(product: ProductCreate, db: Session = Depends(get_db)):
+def create_product(product: ProductCreate, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
     db_product = Product(
         name=product.name,
         product_type=product.product_type,
-        price=product.price
+        price=product.price,
+        owner_id=current_user.id
     )
     db.add(db_product)
     db.flush()
@@ -101,14 +104,12 @@ def create_product(product: ProductCreate, db: Session = Depends(get_db)):
 
 
 @router.put("/{product_id}", response_model=ProductResponse)
-def update_product(
-    product_id: int,
-    product_update: ProductUpdate,
-    db: Session = Depends(get_db)
-):
+def update_product( product_id: int, product_update: ProductUpdate, db: Session = Depends(get_db),current_user: User = Depends(get_current_user)):
     product = db.query(Product).filter(Product.id == product_id).first()
     if not product:
         raise HTTPException(status_code=404, detail="Product not found")
+    if product.owner_id != current_user.id and not current_user.is_admin:
+        raise HTTPException(status_code=403, detail="Not authorised to update this product")
     if product_update.name is not None:
         product.name = product_update.name
     if product_update.product_type is not None:
@@ -121,10 +122,12 @@ def update_product(
 
 
 @router.delete("/{product_id}", status_code=204)
-def delete_product(product_id: int, db: Session = Depends(get_db)):
+def delete_product( product_id: int, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
     product = db.query(Product).filter(Product.id == product_id).first()
     if not product:
         raise HTTPException(status_code=404, detail="Product not found")
+    if product.owner_id != current_user.id and not current_user.is_admin:
+        raise HTTPException(status_code=403, detail="Not authorised to delete this product")
     db.delete(product)
     db.commit()
 

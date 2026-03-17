@@ -69,7 +69,9 @@ class Product(Base):
     name = Column(String(200), nullable=False)
     product_type = Column(String(100), nullable=True)
     price = Column(Float, nullable=True)
+    owner_id = Column(Integer, ForeignKey('users.id'), nullable=True)
 
+    owner = relationship('User', backref='products')
     product_ingredients = relationship('ProductIngredient', back_populates='product', cascade='all, delete-orphan')
 
 # ─────────────────────────────────────────
@@ -120,6 +122,7 @@ class User(Base):
     email = Column(String(200), unique=True, nullable=False)
     hashed_password = Column(String(200), nullable=False)
     is_active = Column(Boolean, default=True)
+    is_admin = Column(Boolean, default=False)
 
     profile = relationship('SkinProfile', back_populates='user', uselist=False)
 
