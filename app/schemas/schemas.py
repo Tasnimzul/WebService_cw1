@@ -1,6 +1,7 @@
 from pydantic import BaseModel, EmailStr, Field
 from typing import Optional, List
 from enum import Enum
+# how data moves in and out of your API — what the user sends, and what they get back.
 
 class SkinTypeEnum(str, Enum):
     normal = "Normal"
@@ -99,7 +100,7 @@ class ProductIngredientResponse(BaseModel):
 
 class ProductResponse(ProductBase):
     id: int
-    owner_id: Optional[int] = None
+    owner_id: Optional[int] = None #bcs when migrating data, there're load of products with no owner
     product_ingredients: List[ProductIngredientResponse] = []
 
     class Config:
@@ -172,7 +173,8 @@ class UserResponse(BaseModel):
 
 class TokenResponse(BaseModel): #used when returning token after succesful login. User stores this token and send it with every protected request
     access_token: str
-    token_type: str = "bearer"
+    token_type: str = "bearer" 
+    #token_type is always "bearer" — this is the OAuth2 standard. The client stores access_token and sends it in every subsequent request as Authorization: Bearer <token>.
 
 
 # ─────────────────────────────────────────

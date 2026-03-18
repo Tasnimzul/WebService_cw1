@@ -18,16 +18,19 @@ from slowapi.util import get_remote_address
 from fastapi import Request
 from app.core.auth import get_current_user
 from app.models.models import User
+import os
 
 router = APIRouter(prefix="/products", tags=["Products"])
-limiter = Limiter(key_func=get_remote_address)
+limiter = Limiter(key_func=get_remote_address, enabled=os.getenv("TESTING") != "true") #limiter disabled for testing
 
+#your two datasets name ingredients differently.
+#It runs two checks for every recommended ingredient r against the product ingredient p:
 def is_ingredient_match(product_ing: str, recommended_set: set) -> bool:
     p = product_ing.lower().strip()
     for r in recommended_set:
-        if r in p or p in r:
+        if r in p or p in r: #check contains
             return True
-        if len(p) <= len(r) * 2 and len(r) <= len(p) * 2:
+        if len(p) <= len(r) * 2 and len(r) <= len(p) * 2: #Handles typos and spelling variants
             if fuzz.ratio(p, r) >= 80:
                 return True
     return False
@@ -38,7 +41,7 @@ def is_ingredient_match(product_ing: str, recommended_set: set) -> bool:
 # ─────────────────────────────────────────
 
 @router.get("/", response_model=List[ProductSummaryResponse])
-@limiter.limit("60/minute") #max 60 per minute — prevents scraping
+@limiter.limit("60/minute") #max 60 per minute — prevent scraping of the entire product catalogue.
 def get_products(
     request: Request,
     product_type: Optional[ProductTypeEnum] = Query(None),
@@ -185,15 +188,15 @@ def check_product_conflicts(
     for product in products:
         product_ingredients[product.id] = {
             pi.ingredient_id for pi in product.product_ingredients
-        }
+        } #returns somthing like dictionary
 
-    # check every pair of products
+    # check every pair of products, No pair is checked twice.
     found_conflicts = []
     for product_a, product_b in combinations(products, 2):
         ids_a = product_ingredients[product_a.id]
         ids_b = product_ingredients[product_b.id]
 
-        conflicts = db.query(IngredientConflict).filter(
+        conflicts = db.query(IngredientConflict).filter( #handles both reversed cases bcs conflict is stored in one way only. if conflict: 3 and 7, this checks both 3 and 7, 7 and 3
             (
                 IngredientConflict.ingredient_1_id.in_(ids_a) &
                 IngredientConflict.ingredient_2_id.in_(ids_b)
@@ -204,7 +207,7 @@ def check_product_conflicts(
             )
         ).all()
 
-        for conflict in conflicts:
+        for conflict in conflicts: #build a human readable form of conflict
             found_conflicts.append(ProductConflictItem(
                 product_1=product_a.name,
                 product_2=product_b.name,

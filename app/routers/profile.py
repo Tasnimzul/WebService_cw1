@@ -132,6 +132,8 @@ def get_recommendations(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
+    #profile must exist AND must have at least one concern. 
+    # Without concerns there are no recommended ingredients to match against, so recommendations are impossible.
     profile = current_user.profile
     if not profile:
         raise HTTPException(status_code=404, detail="No profile found. Create a profile first.")
@@ -140,9 +142,9 @@ def get_recommendations(
         raise HTTPException(status_code=400, detail="No concerns in profile. Update your profile with concerns first.")
 
     # get recommended ingredient names from all user concerns
-    recommended_names = set()
+    recommended_names = set() #a set of lowercase strings, used for fast fuzzy matching
     recommended_ingredients = []
-    seen_ids = set()
+    seen_ids = set() #prevents duplicates in recommended_ingredients
     for concern in profile.concerns:
         for ingredient in concern.recommended_ingredients:
             recommended_names.add(ingredient.name.lower().strip())

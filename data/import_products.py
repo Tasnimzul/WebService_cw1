@@ -169,14 +169,14 @@ def run():
                 print(f"   ...{products_added} products imported")
 
         db.commit()
-        print(f"✅ Done!")
+        print(f"Done!")
         print(f"   Products added:    {products_added}")
         print(f"   Ingredients added: {ingredients_added}")
         print(f"   Links created:     {links_added}")
 
     except Exception as e:
         db.rollback()
-        print(f"❌ Error: {e}")
+        print(f" Error: {e}")
         raise
     finally:
         db.close()

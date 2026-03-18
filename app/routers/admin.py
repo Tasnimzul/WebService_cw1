@@ -10,6 +10,9 @@ from app.schemas.schemas import (
 from app.core.auth import get_current_admin
 
 router = APIRouter(prefix="/admin", tags=["Admin"])
+#Every single endpoint in this router requires admin: User = Depends(get_current_admin). 
+# Remember from core/auth.py — get_current_admin chains on top of get_current_user, so it first validates the JWT and then additionally checks is_admin=True. 
+# Any non-admin gets a 403 Forbidden.
 
 
 # ── USERS ─────────────────────────────────────────────────────────────────────
@@ -47,6 +50,7 @@ def make_admin(
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
     user.is_admin = True
+    #Notice there's no make-admin=False endpoint — once admin, always admin unless manually changed in the database.
     db.commit()
     db.refresh(user)
     return user

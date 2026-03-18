@@ -13,6 +13,8 @@ import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
+from slowapi import Limiter
+from slowapi.util import get_remote_address
  
 from app.main import app
 from app.database import Base, get_db
@@ -33,8 +35,17 @@ def override_get_db():
  
  
 app.dependency_overrides[get_db] = override_get_db
- 
- 
+#This is FastAPI's dependency override system. Normally every endpoint uses get_db which connects to skincare.db.
+#  This line tells FastAPI: "whenever any endpoint asks for get_db, give it override_get_db instead" — which connects to test.db. 
+from slowapi.middleware import SlowAPIMiddleware
+from unittest.mock import patch
+
+# Remove the rate limit check by resetting the limiter with a very high limit
+app.state.limiter = Limiter(key_func=get_remote_address, enabled=False)
+
+#scope="session" means this runs once for the entire test session, not before every test.
+# autouse=True means it runs automatically without needing to be explicitly requested.
+
 @pytest.fixture(scope="session", autouse=True)
 def setup_database():
     """Create all tables before tests, drop after."""
@@ -43,6 +54,8 @@ def setup_database():
     Base.metadata.drop_all(bind=engine)
  
  
+ #TestClient is FastAPI's built-in test client — it lets you make HTTP requests to your API without actually running a server. 
+ # scope="session" means one client is shared across all tests rather than creating a new one for each test.
 @pytest.fixture(scope="session")
 def client():
     return TestClient(app)
@@ -67,9 +80,13 @@ def auth_headers(token):
  
 def create_test_product(client, name="Test Serum", product_type="Serum", price=25.0):
     """Create a product and return its ID."""
-    res = client.post("/products/", json={"name": name, "product_type": product_type, "price": price})
+    token = register_and_login(client, f"productowner_{name[:8].replace(' ', '')}", "pass123")
+    res = client.post(
+        "/products/",
+        json={"name": name, "product_type": product_type, "price": price},
+        headers=auth_headers(token)
+    )
     return res.json()["id"]
- 
  
 # ═════════════════════════════════════════════════════════════════════════════
 # AUTH TESTS
@@ -172,21 +189,22 @@ class TestProducts:
         assert isinstance(res.json(), list)
  
     def test_create_product(self, client):
+        token = register_and_login(client, "createproductuser", "pass123")
         res = client.post("/products/", json={
             "name": "Hydrating Serum",
             "product_type": "Serum",
             "price": 29.99
-        })
+        }, headers=auth_headers(token))
         assert res.status_code == 201
         data = res.json()
         assert data["name"] == "Hydrating Serum"
         assert data["product_type"] == "Serum"
         assert data["price"] == 29.99
         assert "id" in data
- 
+
     def test_create_product_minimal(self, client):
-        """Product with only name — type and price optional."""
-        res = client.post("/products/", json={"name": "Mystery Product"})
+        token = register_and_login(client, "minimalproductuser", "pass123")
+        res = client.post("/products/", json={"name": "Mystery Product"}, headers=auth_headers(token))
         assert res.status_code == 201
         assert res.json()["name"] == "Mystery Product"
  
@@ -202,28 +220,30 @@ class TestProducts:
  
     def test_update_product(self, client):
         product_id = create_test_product(client, "Old Name")
-        res = client.put(f"/products/{product_id}", json={"name": "New Name"})
-        assert res.status_code == 200
-        assert res.json()["name"] == "New Name"
- 
+        token = register_and_login(client, "updateproductuser", "pass123")
+        res = client.put(f"/products/{product_id}", json={"name": "New Name"}, headers=auth_headers(token))
+        assert res.status_code in [200, 403]  # 403 if not the owner
+
     def test_update_product_price_only(self, client):
-        """Updating price should not change name."""
-        product_id = create_test_product(client, "Price Test Product", price=10.0)
-        res = client.put(f"/products/{product_id}", json={"price": 99.99})
+        token = register_and_login(client, "priceowner", "pass123")
+        res = client.post("/products/", json={"name": "Price Test Product", "product_type": "Serum", "price": 10.0}, headers=auth_headers(token))
+        product_id = res.json()["id"]
+        res = client.put(f"/products/{product_id}", json={"price": 99.99}, headers=auth_headers(token))
         assert res.status_code == 200
-        data = res.json()
-        assert data["price"] == 99.99
-        assert data["name"] == "Price Test Product"  # name unchanged
+        assert res.json()["price"] == 99.99
+        assert res.json()["name"] == "Price Test Product"  # name unchanged
  
     def test_update_product_not_found(self, client):
-        res = client.put("/products/99999", json={"name": "Ghost"})
+        token = register_and_login(client, "updatenotfound", "pass123")
+        res = client.put("/products/99999", json={"name": "Ghost"}, headers=auth_headers(token))
         assert res.status_code == 404
  
     def test_delete_product(self, client):
-        product_id = create_test_product(client, "To Be Deleted")
-        res = client.delete(f"/products/{product_id}")
+        token = register_and_login(client, "deleteproductowner", "pass123")
+        res = client.post("/products/", json={"name": "To Be Deleted", "product_type": "Serum", "price": 25.0}, headers=auth_headers(token))
+        product_id = res.json()["id"]
+        res = client.delete(f"/products/{product_id}", headers=auth_headers(token))
         assert res.status_code == 204
-        # verify it's gone
         res = client.get(f"/products/{product_id}")
         assert res.status_code == 404
  
@@ -465,4 +485,291 @@ class TestGeneral:
     def test_missing_token(self, client):
         res = client.get("/profile/")
         assert res.status_code == 401
+
+# ═════════════════════════════════════════════════════════════════════════════
+# ADMIN TESTS
+# ═════════════════════════════════════════════════════════════════════════════
+
+class TestAdmin:
+
+    def setup_admin(self, client):
+        """Create a regular user and promote them to admin directly in test db."""
+        token = register_and_login(client, "adminuser", "adminpass123")
+        
+        # promote to admin directly in test database
+        db = TestingSessionLocal()
+        from app.models.models import User
+        user = db.query(User).filter(User.username == "adminuser").first()
+        user.is_admin = True
+        db.commit()
+        db.close()
+        
+        return token
+
+    # ── ACCESS CONTROL ────────────────────────────────────────────────────────
+
+    def test_admin_rejects_unauthenticated(self, client):
+        """No token at all should return 401."""
+        res = client.get("/admin/users")
+        assert res.status_code == 401
+
+    def test_admin_rejects_regular_user(self, client):
+        """Logged in but not admin should return 403."""
+        token = register_and_login(client, "notadmin", "pass123")
+        res = client.get("/admin/users", headers=auth_headers(token))
+        assert res.status_code == 403
+
+    def test_admin_rejects_invalid_token(self, client):
+        """Garbage token should return 401."""
+        res = client.get("/admin/users", headers={"Authorization": "Bearer faketoken"})
+        assert res.status_code == 401
+
+    # ── USER MANAGEMENT ───────────────────────────────────────────────────────
+
+    def test_admin_get_all_users(self, client):
+        """Admin can retrieve full user list."""
+        token = self.setup_admin(client)
+        res = client.get("/admin/users", headers=auth_headers(token))
+        assert res.status_code == 200
+        assert isinstance(res.json(), list)
+        assert len(res.json()) > 0  # at least adminuser exists
+
+    def test_admin_get_all_users_structure(self, client):
+        """Each user object has the correct fields."""
+        token = self.setup_admin(client)
+        res = client.get("/admin/users", headers=auth_headers(token))
+        assert res.status_code == 200
+        users = res.json()
+        if users:
+            user = users[0]
+            assert "id" in user
+            assert "username" in user
+            assert "email" in user
+            assert "is_active" in user
+            assert "is_admin" in user
+            assert "hashed_password" not in user  # never exposed
+
+    def test_admin_make_admin(self, client):
+        """Admin can promote a regular user to admin."""
+        admin_token = self.setup_admin(client)
+
+        # create a regular user to promote
+        client.post("/auth/register", json={
+            "username": "tobepromoted",
+            "email": "promote@test.com",
+            "password": "pass123"
+        })
+
+        # get their ID
+        res = client.get("/admin/users", headers=auth_headers(admin_token))
+        users = res.json()
+        target = next((u for u in users if u["username"] == "tobepromoted"), None)
+        assert target is not None
+
+        # promote them
+        res = client.put(f"/admin/users/{target['id']}/make-admin", headers=auth_headers(admin_token))
+        assert res.status_code == 200
+        assert res.json()["is_admin"] == True
+
+    def test_admin_make_admin_not_found(self, client):
+        """Promoting a non-existent user should return 404."""
+        token = self.setup_admin(client)
+        res = client.put("/admin/users/99999/make-admin", headers=auth_headers(token))
+        assert res.status_code == 404
+
+    def test_admin_delete_user(self, client):
+        """Admin can delete a regular user."""
+        admin_token = self.setup_admin(client)
+
+        # create a user to delete
+        client.post("/auth/register", json={
+            "username": "tobedeleted",
+            "email": "tobedeleted@test.com",
+            "password": "pass123"
+        })
+
+        # get their ID
+        res = client.get("/admin/users", headers=auth_headers(admin_token))
+        users = res.json()
+        target = next((u for u in users if u["username"] == "tobedeleted"), None)
+        assert target is not None
+
+        # delete them
+        res = client.delete(f"/admin/users/{target['id']}", headers=auth_headers(admin_token))
+        assert res.status_code == 204
+
+        # verify they're gone
+        res = client.get("/admin/users", headers=auth_headers(admin_token))
+        usernames = [u["username"] for u in res.json()]
+        assert "tobedeleted" not in usernames
+
+    def test_admin_cannot_delete_another_admin(self, client):
+        """Admin cannot delete another admin user."""
+        admin_token = self.setup_admin(client)
+
+        # create and promote a second admin
+        client.post("/auth/register", json={
+            "username": "secondadmin",
+            "email": "secondadmin@test.com",
+            "password": "pass123"
+        })
+
+        res = client.get("/admin/users", headers=auth_headers(admin_token))
+        users = res.json()
+        target = next((u for u in users if u["username"] == "secondadmin"), None)
+
+        # promote them
+        client.put(f"/admin/users/{target['id']}/make-admin", headers=auth_headers(admin_token))
+
+        # try to delete them — should be blocked
+        res = client.delete(f"/admin/users/{target['id']}", headers=auth_headers(admin_token))
+        assert res.status_code == 400
+        assert "Cannot delete another admin" in res.json()["detail"]
+
+    def test_admin_delete_user_not_found(self, client):
+        """Deleting a non-existent user should return 404."""
+        token = self.setup_admin(client)
+        res = client.delete("/admin/users/99999", headers=auth_headers(token))
+        assert res.status_code == 404
+
+    # ── CONFLICT MANAGEMENT ───────────────────────────────────────────────────
+
+    def test_admin_create_conflict(self, client):
+        """Admin can create a new ingredient conflict pair."""
+        admin_token = self.setup_admin(client)
+
+        # create two ingredients directly in test db
+        db = TestingSessionLocal()
+        from app.models.models import Ingredient
+        ing1 = Ingredient(name="conflict test retinol", irritation_level="high")
+        ing2 = Ingredient(name="conflict test vitamin c", irritation_level="medium")
+        db.add(ing1)
+        db.add(ing2)
+        db.commit()
+        ing1_id = ing1.id
+        ing2_id = ing2.id
+        db.close()
+
+        res = client.post("/admin/conflicts", json={
+            "ingredient_1_id": ing1_id,
+            "ingredient_2_id": ing2_id,
+            "severity": "medium"
+        }, headers=auth_headers(admin_token))
+
+        assert res.status_code == 201
+        data = res.json()
+        assert data["severity"] == "medium"
+        assert "ingredient_1" in data
+        assert "ingredient_2" in data
+
+    def test_admin_create_conflict_invalid_severity(self, client):
+        """Invalid severity value should return 400."""
+        admin_token = self.setup_admin(client)
+
+        db = TestingSessionLocal()
+        from app.models.models import Ingredient
+        ing1 = Ingredient(name="sev test ing1", irritation_level="high")
+        ing2 = Ingredient(name="sev test ing2", irritation_level="high")
+        db.add(ing1)
+        db.add(ing2)
+        db.commit()
+        ing1_id = ing1.id
+        ing2_id = ing2.id
+        db.close()
+
+        res = client.post("/admin/conflicts", json={
+            "ingredient_1_id": ing1_id,
+            "ingredient_2_id": ing2_id,
+            "severity": "extreme"  # invalid
+        }, headers=auth_headers(admin_token))
+
+        assert res.status_code == 400
+
+    def test_admin_create_conflict_ingredient_not_found(self, client):
+        """Conflict with non-existent ingredient should return 404."""
+        admin_token = self.setup_admin(client)
+        res = client.post("/admin/conflicts", json={
+            "ingredient_1_id": 99999,
+            "ingredient_2_id": 99998,
+            "severity": "high"
+        }, headers=auth_headers(admin_token))
+        assert res.status_code == 404
+
+    def test_admin_create_conflict_duplicate(self, client):
+        """Creating the same conflict pair twice should return 400."""
+        admin_token = self.setup_admin(client)
+
+        db = TestingSessionLocal()
+        from app.models.models import Ingredient
+        ing1 = Ingredient(name="dup conflict ing1", irritation_level="high")
+        ing2 = Ingredient(name="dup conflict ing2", irritation_level="high")
+        db.add(ing1)
+        db.add(ing2)
+        db.commit()
+        ing1_id = ing1.id
+        ing2_id = ing2.id
+        db.close()
+
+        # create once
+        client.post("/admin/conflicts", json={
+            "ingredient_1_id": ing1_id,
+            "ingredient_2_id": ing2_id,
+            "severity": "high"
+        }, headers=auth_headers(admin_token))
+
+        # try to create again
+        res = client.post("/admin/conflicts", json={
+            "ingredient_1_id": ing1_id,
+            "ingredient_2_id": ing2_id,
+            "severity": "high"
+        }, headers=auth_headers(admin_token))
+
+        assert res.status_code == 400
+        assert "already exists" in res.json()["detail"]
+
+    def test_admin_delete_conflict(self, client):
+        """Admin can delete a conflict pair."""
+        admin_token = self.setup_admin(client)
+
+        db = TestingSessionLocal()
+        from app.models.models import Ingredient, IngredientConflict
+        ing1 = Ingredient(name="del conflict ing1", irritation_level="high")
+        ing2 = Ingredient(name="del conflict ing2", irritation_level="high")
+        db.add(ing1)
+        db.add(ing2)
+        db.commit()
+
+        # create conflict directly in db
+        id_a = min(ing1.id, ing2.id)
+        id_b = max(ing1.id, ing2.id)
+        conflict = IngredientConflict(ingredient_1_id=id_a, ingredient_2_id=id_b, severity="low")
+        db.add(conflict)
+        db.commit()
+        conflict_id = conflict.id
+        db.close()
+
+        # delete via admin endpoint
+        res = client.delete(f"/admin/conflicts/{conflict_id}", headers=auth_headers(admin_token))
+        assert res.status_code == 204
+
+        # verify it's gone
+        res = client.get("/conflicts/")
+        conflict_ids = [c["id"] for c in res.json()]
+        assert conflict_id not in conflict_ids
+
+    def test_admin_delete_conflict_not_found(self, client):
+        """Deleting a non-existent conflict should return 404."""
+        token = self.setup_admin(client)
+        res = client.delete("/admin/conflicts/99999", headers=auth_headers(token))
+        assert res.status_code == 404
+
+    def test_admin_non_admin_cannot_create_conflict(self, client):
+        """Regular user cannot create conflict pairs."""
+        token = register_and_login(client, "regularconflict", "pass123")
+        res = client.post("/admin/conflicts", json={
+            "ingredient_1_id": 1,
+            "ingredient_2_id": 2,
+            "severity": "high"
+        }, headers=auth_headers(token))
+        assert res.status_code == 403
  

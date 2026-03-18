@@ -9,12 +9,14 @@ from app.core.auth import create_access_token
 from slowapi import Limiter
 from slowapi.util import get_remote_address
 from fastapi import Request
+import os
 
 router = APIRouter(prefix="/auth", tags=["Auth"])
-limiter = Limiter(key_func=get_remote_address)
+limiter = Limiter(key_func=get_remote_address, enabled=os.getenv("TESTING") != "true") #how slowapi identifies who is making the request — by their IP address. 
+#This is what the rate limiter uses to track and limit requests per user.
 
 
-@router.post("/register", response_model=UserResponse, status_code=201)
+@router.post("/register", response_model=UserResponse, status_code=201) # POST endpoints that create something should return 201.
 @limiter.limit("10/minute") # Auth endpoints: max 10 requests per minute per IP — prevents brute force attacks
 def register(request: Request, user: UserRegister, db: Session = Depends(get_db)):
     # check username not taken
@@ -38,6 +40,8 @@ def register(request: Request, user: UserRegister, db: Session = Depends(get_db)
 
 @router.post("/login", response_model=TokenResponse)
 @limiter.limit("10/minute") #Auth endpoints: max 10 requests per minute per IP — prevents brute force attacks
+#OAuth2PasswordRequestForm is a FastAPI built-in that expects username and password as form fields, not JSON.
+#login endpoints use form data so they're compatible with tools like Swagger UI's Authorize button
 def login(request: Request,form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depends(get_db)):
     db_user = db.query(User).filter(User.username == form_data.username).first()
     if not db_user or not verify_password(form_data.password, db_user.hashed_password):
@@ -47,3 +51,6 @@ def login(request: Request,form_data: OAuth2PasswordRequestForm = Depends(), db:
         )
     token = create_access_token(data={"sub": str(db_user.id)})
     return TokenResponse(access_token=token)
+
+#If you returned different errors for "user not found" vs "wrong password", an attacker could use that to enumerate valid usernames.
+# By returning the same vague message for both cases, you don't reveal which part was wrong.
