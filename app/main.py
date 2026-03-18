@@ -16,7 +16,15 @@ limiter = Limiter(key_func=get_remote_address)
 app = FastAPI(
     title="Skincare & Ingredient Analysis API",
     description="A skincare product recommendation and ingredient analysis API",
-    version="1.0.0"
+    version="1.0.0",
+    openapi_tags=[
+        {"name": "Auth", "description": "Register and login"},
+        {"name": "Users", "description": "Manage your account"},
+        {"name": "Admin", "description": "Admin-only user and conflict management"},
+        {"name": "Products", "description": "Browse and manage skincare products"},
+        {"name": "Skin Profile", "description": "Create and manage your skin profile"},
+        {"name": "Analytics", "description": "Product and ingredient analytics, conflict checking, and recommendations"},
+    ]
 )
 
 app.add_middleware(
@@ -33,7 +41,9 @@ app.mount("/static", StaticFiles(directory="frontend"), name="static")
 
 app.include_router(auth.router)
 app.include_router(products.router)
+app.include_router(products.router_analytics)
 app.include_router(profile.router)
+app.include_router(profile.router_analytics)
 app.include_router(analytics.router)
 app.include_router(conflicts.router)
 app.include_router(users.router)

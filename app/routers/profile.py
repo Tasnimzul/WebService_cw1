@@ -13,6 +13,7 @@ from rapidfuzz import fuzz
 from app.schemas.schemas import SkinTypeEnum, SkinConcernResponse
 
 router = APIRouter(prefix="/profile", tags=["Skin Profile"])
+router_analytics = APIRouter(prefix="/profile", tags=["Analytics"])
 
 
 def is_ingredient_match(product_ing: str, recommended_set: set) -> bool: #uses combination of fuzzy and if contains matching
@@ -114,7 +115,7 @@ def delete_profile(
     db.delete(profile)
     db.commit()
 
-@router.get("/common-concerns", response_model=List[SkinConcernResponse])
+@router_analytics.get("/common-concerns", response_model=List[SkinConcernResponse])
 def get_common_concerns_for_skin_type(
     skin_type: SkinTypeEnum = Query(...),
     db: Session = Depends(get_db)
@@ -127,7 +128,7 @@ def get_common_concerns_for_skin_type(
     return concerns
 
 
-@router.get("/recommendations", response_model=RecommendationResponse)
+@router_analytics.get("/recommendations", response_model=RecommendationResponse)
 def get_recommendations(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
