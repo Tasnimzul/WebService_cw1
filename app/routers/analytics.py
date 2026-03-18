@@ -12,7 +12,7 @@ router = APIRouter(prefix="/analytics", tags=["Analytics"])
 def concern_distribution(db: Session = Depends(get_db)):
     total_profiles = db.query(SkinProfile).count()
 
-    if total_profiles == 0:
+    if total_profiles == 0: #Always handle the empty case first. If no profiles exist, return a valid empty response rather than letting the percentage calculation divide by zero later.
         return ConcernDistributionResponse(
             total_profiles=0,
             most_common="N/A",

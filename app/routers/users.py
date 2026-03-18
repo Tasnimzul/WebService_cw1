@@ -12,6 +12,7 @@ router = APIRouter(prefix="/users", tags=["Users"])
 @router.get("/me", response_model=UserResponse)
 def get_me(current_user: User = Depends(get_current_user)):
     return current_user
+#it validates the JWT, fetches the user from the database, and passes them in. The function itself just returns that user object directly.
 
 
 @router.put("/me", response_model=UserResponse)
@@ -23,7 +24,7 @@ def update_me(
     if user_update.username is not None:
         existing = db.query(User).filter(
             User.username == user_update.username,
-            User.id != current_user.id
+            User.id != current_user.id #The uniqueness check filters out the current user — User.id != current_user.id — so you can submit your own current username without getting a "already taken" error.
         ).first()
         if existing:
             raise HTTPException(status_code=400, detail="Username already taken")

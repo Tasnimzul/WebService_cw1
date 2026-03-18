@@ -4,7 +4,7 @@ from fastapi.responses import FileResponse
 from fastapi.middleware.cors import CORSMiddleware
 from app.database import engine, Base
 from app.models import models
-from app.routers import products, auth, profile, analytics, conflicts, users
+from app.routers import products, auth, profile, analytics, conflicts, users, admin, ingredients
 
 from slowapi import Limiter, _rate_limit_exceeded_handler
 from slowapi.util import get_remote_address
@@ -37,6 +37,8 @@ app.include_router(profile.router)
 app.include_router(analytics.router)
 app.include_router(conflicts.router)
 app.include_router(users.router)
+app.include_router(admin.router)
+app.include_router(ingredients.router)
 
 @app.get("/")
 def root():
