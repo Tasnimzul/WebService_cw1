@@ -21,6 +21,7 @@ from app.models.models import User
 import os
 
 router = APIRouter(prefix="/products", tags=["Products"])
+router_analytics = APIRouter(prefix="/products", tags=["Analytics"])
 limiter = Limiter(key_func=get_remote_address, enabled=os.getenv("TESTING") != "true") #limiter disabled for testing
 
 #your two datasets name ingredients differently.
@@ -124,7 +125,7 @@ def update_product( product_id: int, product_update: ProductUpdate, db: Session 
     return product
 
 
-@router.delete("/{product_id}", status_code=204)
+@router.delete("/{product_id}", status_code=204,)
 def delete_product( product_id: int, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
     product = db.query(Product).filter(Product.id == product_id).first()
     if not product:
@@ -139,7 +140,7 @@ def delete_product( product_id: int, db: Session = Depends(get_db), current_user
 # ANALYTICS
 # ─────────────────────────────────────────
 
-@router.get("/{product_id}/safety-score", response_model=SafetyScoreResponse)
+@router_analytics.get("/{product_id}/safety-score", response_model=SafetyScoreResponse)
 def get_safety_score(product_id: int, db: Session = Depends(get_db)):
     product = db.query(Product).filter(Product.id == product_id).first()
     if not product:
@@ -168,7 +169,7 @@ def get_safety_score(product_id: int, db: Session = Depends(get_db)):
     )
 
 
-@router.post("/conflict-check", response_model=ProductConflictCheckResponse)
+@router_analytics.post("/conflict-check", response_model=ProductConflictCheckResponse)
 def check_product_conflicts(
     request: ProductConflictCheckRequest,
     db: Session = Depends(get_db)
@@ -223,7 +224,7 @@ def check_product_conflicts(
     )
 
 
-@router.get("/{product_id}/profile-match", response_model=ProfileMatchResponse)
+@router_analytics.get("/{product_id}/profile-match", response_model=ProfileMatchResponse)
 def profile_match(
     product_id: int,
     skin_type: SkinTypeEnum = Query(...),

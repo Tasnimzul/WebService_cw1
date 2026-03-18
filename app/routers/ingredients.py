@@ -5,7 +5,7 @@ from app.database import get_db
 from app.models.models import Ingredient
 from app.schemas.schemas import IngredientResponse
 
-router = APIRouter(prefix="/ingredients", tags=["Ingredients"])
+router = APIRouter(prefix="/ingredients", tags=["Analytics"])
 
 #to find ingredients that match the spelling. useful for search bar
 @router.get("/", response_model=List[IngredientResponse])
