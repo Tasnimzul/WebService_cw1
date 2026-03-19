@@ -333,7 +333,9 @@
 </div>
 
 <script>
-const API = 'http://127.0.0.1:8000';
+const API = window.location.hostname === '127.0.0.1' || window.location.hostname === 'localhost' 
+    ? 'http://127.0.0.1:8000' 
+    : 'https://comp3011-skincare.onrender.com'; //for deployment
 let token = localStorage.getItem('token') || null;
 let currentUser = localStorage.getItem('username') || null;
 let currentUserId = parseInt(localStorage.getItem('userId')) || null;
