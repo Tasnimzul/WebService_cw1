@@ -11,5 +11,3 @@ services:
         value: HS256
       - key: ACCESS_TOKEN_EXPIRE_MINUTES
         value: 30
-      - key: DATABASE_URL
-        value: sqlite:///./skincare.db
