@@ -9,7 +9,11 @@ load_dotenv() #reads .env file
 DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///./skincare.db") #looks for db url in .env, if it cant find, it'll fall to sqlite:///./skincare.db
 # sqlite:///./skincare.db = "create a SQLite database fike calle skincare.db incurrent folder"
 
-engine = create_engine(DATABASE_URL, connect_args={"check_same_thread": False}) #engine= actual db connection, check_same_thread": False ->
+# check_same_thread is SQLite-only — don't pass it for PostgreSQL
+if DATABASE_URL.startswith("sqlite"):
+    engine = create_engine(DATABASE_URL, connect_args={"check_same_thread": False})
+else:
+    engine = create_engine(DATABASE_URL)
 
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine) # no autocommit, so nothing saves to db automatically, autoflash=false -> wont auto sync changes mid session
 #bind=engine -> connects this session factory to your database engine
