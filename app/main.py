@@ -11,6 +11,10 @@ from slowapi.util import get_remote_address
 from slowapi.errors import RateLimitExceeded
 
 Base.metadata.create_all(bind=engine)
+import subprocess
+subprocess.run(["python", "data/import_concerns.py"])
+subprocess.run(["python", "data/import_products.py"])
+subprocess.run(["python", "data/import_conflicts.py"])
 limiter = Limiter(key_func=get_remote_address)
 
 app = FastAPI(
