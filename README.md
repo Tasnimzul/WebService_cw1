@@ -222,3 +222,5 @@ ACCESS_TOKEN_EXPIRE_MINUTES=30
 **Position in ProductIngredient** — Cosmetics regulations require ingredients listed in descending concentration order. Position 1 = highest concentration.
 
 **Admin role** — Separate admin endpoints for user management and conflict pair management, protected by role-based access control.
+
+postgresql://skincare_db_mzas_user:G2HoZhSUGbr37HuGQyck2Ot1BUTPLDkj@dpg-d6ttp0fgi27c73dttdlg-a/skincare_db_mzas

@@ -207,4 +207,8 @@ marimo/_lsp/
 __marimo__/
 
 #for pytest
+skincare.db
 test.db
+.env
+__pycache__/
+*.pyc
