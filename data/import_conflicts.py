@@ -38,7 +38,7 @@ def run():
             name_2 = str(row["ingredient_2"]).strip().lower()
             severity = str(row["severity"]).strip().lower()
 
-            # ── Look up ingredients (case-insensitive) ────────────────────
+            # ── Look up ingredients (case-insensitive)
             ing_1 = db.query(Ingredient).filter(
                 Ingredient.name.ilike(name_1)
             ).first()

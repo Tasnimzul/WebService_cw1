@@ -19,7 +19,7 @@ import pandas as pd
 from app.database import SessionLocal, engine, Base
 from app.models.models import SkinConcern, Ingredient
 
-# ── irritation level lookup (dermatological knowledge) ──────────────────────
+# ── irritation level lookup (dermatological knowledge) 
 # Used to set irritation_level on each ingredient at import time
 IRRITATION_LOOKUP = {
     # High irritation
@@ -106,7 +106,7 @@ def run():
             concern_name = str(row["Concern"]).strip()
             raw_ingredients = row["Ingredients"]
 
-            # ── 1. Get or create SkinConcern ─────────────────────────────
+            # ── 1. Get or create SkinConcern 
             concern = db.query(SkinConcern).filter(
                 SkinConcern.name == concern_name,
                 SkinConcern.skin_type == skin_type
@@ -118,7 +118,7 @@ def run():
                 db.flush()  # get ID without full commit
                 concerns_added += 1
 
-            # ── 2. Parse + get or create each Ingredient ─────────────────
+            # ── 2. Parse + get or create each Ingredient 
             ingredient_names = parse_ingredients(raw_ingredients)
 
             for ing_name in ingredient_names:
@@ -148,7 +148,7 @@ def run():
 
                 ingredient = ingredient_cache[cache_key]
 
-                # ── 3. Link ingredient to concern (avoid duplicates) ──────
+                # ── 3. Link ingredient to concern (avoid duplicates) 
                 if ingredient not in concern.recommended_ingredients:
                     concern.recommended_ingredients.append(ingredient)
                     links_added += 1

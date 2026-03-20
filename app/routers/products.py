@@ -37,9 +37,7 @@ def is_ingredient_match(product_ing: str, recommended_set: set) -> bool:
     return False
 
 
-# ─────────────────────────────────────────
 # CRUD
-# ─────────────────────────────────────────
 
 @router.get("/", response_model=List[ProductSummaryResponse])
 @limiter.limit("60/minute") #max 60 per minute — prevent scraping of the entire product catalogue.
@@ -136,9 +134,7 @@ def delete_product( product_id: int, db: Session = Depends(get_db), current_user
     db.commit()
 
 
-# ─────────────────────────────────────────
 # ANALYTICS
-# ─────────────────────────────────────────
 
 @router_analytics.get("/{product_id}/safety-score", response_model=SafetyScoreResponse)
 def get_safety_score(product_id: int, db: Session = Depends(get_db)):

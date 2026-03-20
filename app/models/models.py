@@ -2,9 +2,7 @@ from sqlalchemy import (Column, Integer, String, Float, ForeignKey, Table, Boole
 from sqlalchemy.orm import relationship
 from app.database import Base
 
-# ─────────────────────────────────────────
 # BRIDGE TABLES
-# ─────────────────────────────────────────
 
 # SkinConcern ↔ Ingredient (recommended ingredients per concern)
 concern_ingredient = Table(
@@ -20,10 +18,8 @@ profile_concern = Table(
     Column('concern_id', ForeignKey('skin_concerns.id'), primary_key=True)
 )
 
-# ─────────────────────────────────────────
 # SKIN CONCERN
 # from skin concern dataset
-# ─────────────────────────────────────────
 
 class SkinConcern(Base):
     __tablename__ = 'skin_concerns'
@@ -40,10 +36,9 @@ class SkinConcern(Base):
         UniqueConstraint('name', 'skin_type', name='unique_concern_per_skintype'),
     ) #same concern can't be duplicated for the same skin type, but CAN exist across different skin types:
 
-# ─────────────────────────────────────────
-# INGREDIENT
-# from both datasets
-# ─────────────────────────────────────────
+
+# INGREDIENT(from both datasets)
+
 
 class Ingredient(Base):
     __tablename__ = 'ingredients'
@@ -57,10 +52,9 @@ class Ingredient(Base):
     conflicts_as_first = relationship('IngredientConflict', foreign_keys='IngredientConflict.ingredient_1_id', back_populates='ingredient_1')
     conflicts_as_second = relationship('IngredientConflict', foreign_keys='IngredientConflict.ingredient_2_id', back_populates='ingredient_2')
 
-# ─────────────────────────────────────────
-# PRODUCT
-# from lookfantastic dataset
-# ─────────────────────────────────────────
+
+# PRODUCT(from cleaned product dataset)
+
 
 class Product(Base):
     __tablename__ = 'products'
@@ -74,9 +68,9 @@ class Product(Base):
     owner = relationship('User', backref='products')
     product_ingredients = relationship('ProductIngredient', back_populates='product', cascade='all, delete-orphan')
 
-# ─────────────────────────────────────────
+
 # PRODUCT INGREDIENT
-# ─────────────────────────────────────────
+
 
 class ProductIngredient(Base):
     __tablename__ = 'product_ingredients'
@@ -89,10 +83,7 @@ class ProductIngredient(Base):
     product = relationship('Product', back_populates='product_ingredients')
     ingredient = relationship('Ingredient', back_populates='used_in_products')
 
-# ─────────────────────────────────────────
-# INGREDIENT CONFLICT
-# manually curated
-# ─────────────────────────────────────────
+# INGREDIENT CONFLICT(manually build)
 
 class IngredientConflict(Base):
     __tablename__ = 'ingredient_conflicts'
@@ -110,9 +101,8 @@ class IngredientConflict(Base):
         UniqueConstraint('ingredient_1_id', 'ingredient_2_id', name='unique_conflict_pair'),
     )
 
-# ─────────────────────────────────────────
+
 # USER
-# ─────────────────────────────────────────
 
 class User(Base):
     __tablename__ = 'users'
@@ -126,11 +116,8 @@ class User(Base):
 
     profile = relationship('SkinProfile', back_populates='user', uselist=False)
 
-# ─────────────────────────────────────────
-# SKIN PROFILE
-# user generated — one per user
-# ─────────────────────────────────────────
 
+# SKIN PROFILE(one per user, user can choose to register or not)
 class SkinProfile(Base):
     __tablename__ = 'skin_profiles'
 

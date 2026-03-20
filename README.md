@@ -6,13 +6,16 @@ A data-driven RESTful API for skincare product recommendations, ingredient safet
 
 **Module:** COMP3011 Web Services — University of Leeds  
 **Student:** Tasnim Zulkifli  
-**GitHub:** https://github.com/Tasnimzul/WebService_cw1
+**GitHub:** https://github.com/Tasnimzul/WebService_cw1  
+**Live API:** https://comp3011-skincare.onrender.com  
+
+> **Note:** The API is hosted on Render's free tier and may take up to 50 seconds to respond on the first request after a period of inactivity.
 
 ---
 
 ## Features
 
-- Browse and search more than 1000 real skincare products
+- Browse and search more than 1,000 real skincare products
 - Ingredient safety scoring (0–10) based on irritation levels
 - Ingredient conflict detection across multiple products
 - Personalised skin profile and product recommendations
@@ -40,7 +43,17 @@ A data-driven RESTful API for skincare product recommendations, ingredient safet
 | Server | Uvicorn |
 | Frontend | Vanilla HTML/CSS/JavaScript |
 
+---
 
+## Live Demo
+
+| URL | Description |
+|---|---|
+| https://comp3011-skincare.onrender.com | Frontend application |
+| https://comp3011-skincare.onrender.com/docs | Interactive Swagger UI |
+| https://comp3011-skincare.onrender.com/redoc | ReDoc documentation |
+
+---
 
 ## Setup Instructions
 
@@ -100,7 +113,7 @@ The API will be available at `http://127.0.0.1:8000`
 
 ---
 
-## Usage
+## Local Usage
 
 | URL | Description |
 |---|---|
@@ -108,9 +121,15 @@ The API will be available at `http://127.0.0.1:8000`
 | `http://127.0.0.1:8000/docs` | Interactive Swagger UI |
 | `http://127.0.0.1:8000/redoc` | ReDoc documentation |
 
-### API Documentation
+---
+
+## API Documentation
 
 Full API documentation is available in [API_documentation.pdf](./API_documentation.pdf)
+
+Live interactive documentation: https://comp3011-skincare.onrender.com/docs
+
+Authentication is handled via JWT Bearer tokens. Obtain a token by calling `POST /auth/login` and include it in the `Authorization: Bearer <token>` header for protected endpoints. Unauthenticated requests to protected endpoints return 401.
 
 ---
 
@@ -147,28 +166,39 @@ TESTING=true venv/bin/python -m pytest tests/ -v
 | GET | `/products/{id}/safety-score` | Ingredient safety score 0–10 |
 | POST | `/products/conflict-check` | Check conflicts between products |
 | GET | `/products/{id}/profile-match` | Match score for a skin type |
-| GET | `/profile/recommendations` | Personalised product recommendations |
+| GET | `/profile/recommendations` | Personalised product recommendations (JWT required) |
 | GET | `/analytics/ingredient-frequency` | Top 20 most common ingredients |
 | GET | `/analytics/concern-distribution` | Most common skin concerns across users |
 
 ### Skin Profile
 | Method | Endpoint | Description |
 |---|---|---|
-| POST | `/profile/` | Create skin profile |
-| GET | `/profile/` | Get your profile |
-| PUT | `/profile/` | Update skin type and concerns |
-| DELETE | `/profile/` | Delete profile |
+| POST | `/profile/` | Create skin profile (JWT required) |
+| GET | `/profile/` | Get your profile (JWT required) |
+| PUT | `/profile/` | Update skin type and concerns (JWT required) |
+| DELETE | `/profile/` | Delete profile (JWT required) |
 | GET | `/profile/common-concerns` | Browse concerns by skin type |
+
+### Admin
+| Method | Endpoint | Description |
+|---|---|---|
+| GET | `/admin/users` | List all users (admin only) |
+| DELETE | `/admin/users/{id}` | Delete a user (admin only) |
+| PUT | `/admin/users/{id}/make-admin` | Promote user to admin (admin only) |
+| POST | `/admin/conflicts` | Create ingredient conflict pair (admin only) |
+| DELETE | `/admin/conflicts/{id}` | Delete conflict pair (admin only) |
 
 ---
 
 ## MCP Server (AI Integration)
 
-This API includes an MCP (Model Context Protocol) server that allows AI assistants like Claude to directly query the skincare database.
+This API includes an MCP (Model Context Protocol) server that allows any MCP-compatible AI assistant to directly query the skincare database.
 
-### Setup with Claude Desktop
+### Setup
 
-1. Add to `~/Library/Application Support/Claude/claude_desktop_config.json`:
+1. Ensure the FastAPI server is running at `http://127.0.0.1:8000`
+
+2. Add the following to your AI assistant's MCP config file:
 
 ```json
 {
@@ -181,12 +211,24 @@ This API includes an MCP (Model Context Protocol) server that allows AI assistan
 }
 ```
 
-2. Start the FastAPI server, then restart Claude Desktop.
+For Claude Desktop, the config file is at:
+- macOS: `~/Library/Application Support/Claude/claude_desktop_config.json`
+- Windows: `%APPDATA%\Claude\claude_desktop_config.json`
 
-3. Claude can now call your API directly:
-   - *"Check if products 1 and 5 have ingredient conflicts"*
-   - *"What products are recommended for oily skin with acne?"*
-   - *"What is the safety score of product 3?"*
+3. Restart your AI assistant. It will automatically discover all 8 available tools.
+
+### Available Tools
+
+| Tool | Description |
+|---|---|
+| `search_products` | Search and filter products by type or price |
+| `get_product_details` | Get full ingredient list for a product |
+| `check_safety_score` | Analyse ingredient safety (0–10) |
+| `check_product_conflicts` | Check if products conflict |
+| `get_recommendations` | Get recommendations by skin type and concern |
+| `get_known_conflicts` | List all known ingredient conflict pairs |
+| `profile_match` | Check how well a product matches a skin type |
+| `get_ingredient_frequency` | Top 20 most common ingredients |
 
 ---
 
@@ -211,6 +253,11 @@ ALGORITHM=HS256
 ACCESS_TOKEN_EXPIRE_MINUTES=30
 ```
 
+For PostgreSQL (production):
+```env
+DATABASE_URL=postgresql://user:password@host/dbname
+```
+
 ---
 
 ## Design Decisions
@@ -221,6 +268,6 @@ ACCESS_TOKEN_EXPIRE_MINUTES=30
 
 **Position in ProductIngredient** — Cosmetics regulations require ingredients listed in descending concentration order. Position 1 = highest concentration.
 
-**Admin role** — Separate admin endpoints for user management and conflict pair management, protected by role-based access control.
+**SQLite for development, PostgreSQL for production** — SQLAlchemy's multi-dialect support means no query code changes between environments — only the `DATABASE_URL` environment variable needs updating.
 
-postgresql://skincare_db_mzas_user:G2HoZhSUGbr37HuGQyck2Ot1BUTPLDkj@dpg-d6ttp0fgi27c73dttdlg-a/skincare_db_mzas
+**Admin role** — Separate admin endpoints for user management and conflict pair management, protected by role-based access control.
