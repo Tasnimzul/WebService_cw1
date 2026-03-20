@@ -26,9 +26,7 @@ class ProductTypeEnum(str, Enum):
     bath_oil = "Bath Oil"
 
 
-# ─────────────────────────────────────────
 # INGREDIENT
-# ─────────────────────────────────────────
 
 class IngredientBase(BaseModel):
     name: str
@@ -47,9 +45,8 @@ class IngredientResponse(IngredientBase):
         from_attributes = True
 
 
-# ─────────────────────────────────────────
 # SKIN CONCERN
-# ─────────────────────────────────────────
+
 
 class SkinConcernBase(BaseModel):
     name: str
@@ -67,9 +64,7 @@ class SkinConcernResponse(BaseModel):
         from_attributes = True
 
 
-# ─────────────────────────────────────────
 # PRODUCT
-# ─────────────────────────────────────────
 
 class ProductBase(BaseModel):
     name: str
@@ -114,9 +109,7 @@ class ProductSummaryResponse(ProductBase): #basically response with no ingredien
         from_attributes = True
 
 
-# ─────────────────────────────────────────
 # INGREDIENT CONFLICT
-# ─────────────────────────────────────────
 
 class IngredientConflictBase(BaseModel):
     ingredient_1_id: int
@@ -135,9 +128,7 @@ class IngredientConflictResponse(IngredientConflictBase):
         from_attributes = True
 
 
-# ─────────────────────────────────────────
 # AUTH
-# ─────────────────────────────────────────
 
 class UserRegister(BaseModel):
     username: str
@@ -177,9 +168,7 @@ class TokenResponse(BaseModel): #used when returning token after succesful login
     #token_type is always "bearer" — this is the OAuth2 standard. The client stores access_token and sends it in every subsequent request as Authorization: Bearer <token>.
 
 
-# ─────────────────────────────────────────
 # SKIN PROFILE
-# ─────────────────────────────────────────
 
 class SkinProfileCreate(BaseModel):
     skin_type: SkinTypeEnum
@@ -204,9 +193,7 @@ class SkinProfileResponse(BaseModel):
         from_attributes = True
 
 
-# ─────────────────────────────────────────
 # ANALYTICS
-# ─────────────────────────────────────────
 
 class SafetyScoreResponse(BaseModel):
     product_id: int

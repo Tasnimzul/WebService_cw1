@@ -122,7 +122,7 @@ def run():
             price = parse_price(row["price"])
             ingredient_names = parse_ingredients(row["clean_ingreds"])
 
-            # ── 1. Create Product ─────────────────────────────────────────
+            # ── 1. Create Product 
             product = Product(
                 name=name,
                 product_type=product_type,
@@ -132,7 +132,7 @@ def run():
             db.flush()  # get product.id
             products_added += 1
 
-            # ── 2. Create ingredients + ProductIngredient links ───────────
+            # ── 2. Create ingredients + ProductIngredient links 
             for position, ing_name in enumerate(ingredient_names, start=1):
                 # position 1 = highest concentration (first in list)
                 cache_key = ing_name.lower()

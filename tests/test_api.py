@@ -19,7 +19,7 @@ from slowapi.util import get_remote_address
 from app.main import app
 from app.database import Base, get_db
  
-# ── TEST DATABASE (in-memory SQLite, separate from dev db) ───────────────────
+# TEST DATABASE (in-memory SQLite, separate from dev db) 
 TEST_DATABASE_URL = "sqlite:///./test.db"
  
 engine = create_engine(TEST_DATABASE_URL, connect_args={"check_same_thread": False})
@@ -61,7 +61,7 @@ def client():
     return TestClient(app)
  
  
-# ── HELPERS ───────────────────────────────────────────────────────────────────
+# HELPERS 
  
 def register_and_login(client, username="testuser", password="testpass123"):
     """Register a user and return their JWT token."""
@@ -88,9 +88,7 @@ def create_test_product(client, name="Test Serum", product_type="Serum", price=2
     )
     return res.json()["id"]
  
-# ═════════════════════════════════════════════════════════════════════════════
 # AUTH TESTS
-# ═════════════════════════════════════════════════════════════════════════════
  
 class TestAuth:
  
@@ -149,9 +147,7 @@ class TestAuth:
         assert res.status_code == 401
  
  
-# ═════════════════════════════════════════════════════════════════════════════
 # USER TESTS
-# ═════════════════════════════════════════════════════════════════════════════
  
 class TestUsers:
  
@@ -177,9 +173,7 @@ class TestUsers:
         assert res.status_code == 204
  
  
-# ═════════════════════════════════════════════════════════════════════════════
 # PRODUCT TESTS
-# ═════════════════════════════════════════════════════════════════════════════
  
 class TestProducts:
  
@@ -263,9 +257,7 @@ class TestProducts:
         assert all(p["price"] <= 10 for p in results if p["price"] is not None)
  
  
-# ═════════════════════════════════════════════════════════════════════════════
 # SAFETY SCORE TESTS
-# ═════════════════════════════════════════════════════════════════════════════
  
 class TestSafetyScore:
  
@@ -310,9 +302,7 @@ class TestSafetyScore:
         assert 0 <= data["safety_score"] <= 10
  
  
-# ═════════════════════════════════════════════════════════════════════════════
 # CONFLICT CHECK TESTS
-# ═════════════════════════════════════════════════════════════════════════════
  
 class TestConflicts:
  
@@ -336,9 +326,7 @@ class TestConflicts:
         assert isinstance(res.json(), list)
  
  
-# ═════════════════════════════════════════════════════════════════════════════
 # PROFILE TESTS
-# ═════════════════════════════════════════════════════════════════════════════
  
 class TestProfile:
  
@@ -409,9 +397,7 @@ class TestProfile:
         assert res.status_code == 422  # invalid enum value
  
  
-# ═════════════════════════════════════════════════════════════════════════════
 # ANALYTICS TESTS
-# ═════════════════════════════════════════════════════════════════════════════
  
 class TestAnalytics:
  
@@ -443,9 +429,7 @@ class TestAnalytics:
             assert "percentage" in item
  
  
-# ═════════════════════════════════════════════════════════════════════════════
 # PROFILE MATCH TESTS
-# ═════════════════════════════════════════════════════════════════════════════
  
 class TestProfileMatch:
  
@@ -468,9 +452,7 @@ class TestProfileMatch:
         assert res.status_code == 422
  
  
-# ═════════════════════════════════════════════════════════════════════════════
 # ROOT + GENERAL TESTS
-# ═════════════════════════════════════════════════════════════════════════════
  
 class TestGeneral:
  
@@ -486,9 +468,7 @@ class TestGeneral:
         res = client.get("/profile/")
         assert res.status_code == 401
 
-# ═════════════════════════════════════════════════════════════════════════════
 # ADMIN TESTS
-# ═════════════════════════════════════════════════════════════════════════════
 
 class TestAdmin:
 
@@ -506,7 +486,7 @@ class TestAdmin:
         
         return token
 
-    # ── ACCESS CONTROL ────────────────────────────────────────────────────────
+    #  ACCESS CONTROL 
 
     def test_admin_rejects_unauthenticated(self, client):
         """No token at all should return 401."""
@@ -524,7 +504,7 @@ class TestAdmin:
         res = client.get("/admin/users", headers={"Authorization": "Bearer faketoken"})
         assert res.status_code == 401
 
-    # ── USER MANAGEMENT ───────────────────────────────────────────────────────
+    #  USER MANAGEMENT 
 
     def test_admin_get_all_users(self, client):
         """Admin can retrieve full user list."""
@@ -632,7 +612,7 @@ class TestAdmin:
         res = client.delete("/admin/users/99999", headers=auth_headers(token))
         assert res.status_code == 404
 
-    # ── CONFLICT MANAGEMENT ───────────────────────────────────────────────────
+    # CONFLICT MANAGEMENT
 
     def test_admin_create_conflict(self, client):
         """Admin can create a new ingredient conflict pair."""

@@ -15,7 +15,7 @@ router = APIRouter(prefix="/admin", tags=["Admin"])
 # Any non-admin gets a 403 Forbidden.
 
 
-# ── USERS ─────────────────────────────────────────────────────────────────────
+#USERS
 
 @router.get("/users", response_model=List[UserResponse])
 def get_all_users(
@@ -57,7 +57,7 @@ def make_admin(
 
 
 
-# ── CONFLICTS ─────────────────────────────────────────────────────────────────
+#Conflicts
 
 @router.post("/conflicts", response_model=IngredientConflictResponse, status_code=201)
 def create_conflict(

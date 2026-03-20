@@ -19,14 +19,14 @@ from mcp.server import Server
 from mcp.server.stdio import stdio_server
 from mcp.types import Tool, TextContent
  
-# ── CONFIG ────────────────────────────────────────────────────────────────────
+# CONFIG 
 API_BASE = "http://127.0.0.1:8000"
  
-# ── SERVER SETUP ─────────────────────────────────────────────────────────────
+# SERVER SETUP
 server = Server("skincare-api")
  
  
-# ── TOOL DEFINITIONS ─────────────────────────────────────────────────────────
+# TOOL DEFINITIONS 
  
 @server.list_tools()
 async def list_tools() -> list[Tool]:
@@ -195,7 +195,7 @@ async def list_tools() -> list[Tool]:
     ]
  
  
-# ── TOOL HANDLERS ─────────────────────────────────────────────────────────────
+# TOOL HANDLERS 
  
 @server.call_tool()
 async def call_tool(name: str, arguments: dict) -> list[TextContent]:
@@ -393,7 +393,7 @@ async def call_tool(name: str, arguments: dict) -> list[TextContent]:
             return [TextContent(type="text", text=f"Error calling API: {str(e)}")]
  
  
-# ── ENTRY POINT ───────────────────────────────────────────────────────────────
+# ENTRY POINT 
  
 async def main():
     async with stdio_server() as (read_stream, write_stream):
